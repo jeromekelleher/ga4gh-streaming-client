@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib
 
 import htsget
 import pysam
@@ -125,12 +126,17 @@ def sanger_cli(
 
     Available at https://github.com/wtsi-npg/npg_ranger/blob/devel/bin/client.js
     """
+    query_params = dict()
     if reference_name is not None:
-        url += "?referenceName=" + str(reference_name)
-        if start is not None:
-            url += "&start=" + str(start)
-            if end is not None:
-                url += "&end=" + str(end)
+        query_params['referenceName'] = reference_name
+    if start is not None:
+        query_params['start'] = start
+    if end is not None:
+        query_params['end'] = end
+    if data_format is not None:
+        query_params['format'] = data_format
+    if len(query_params) > 0 :
+        url += '?' + urllib.urlencode(query_params)
     cmd = ["node", "client.js", url, filename]
     logging.info("sanger client: run {}".format(" ".join(cmd)))
     retry_command(cmd)
@@ -244,9 +250,10 @@ class ServerTester(object):
         self.max_random_query_length = max_random_query_length
         self.alignment_file = pysam.AlignmentFile(self.source_file_name)
         extension = os.path.splitext(self.source_file_name)[1]
-        if extension == ".cram":
+        extension_lower = extension.lower()
+        if extension_lower == ".cram":
             self.data_format = FORMAT_CRAM
-        elif extension == ".bam":
+        elif extension_lower == ".bam":
             self.data_format = FORMAT_BAM
         else:
             raise ValueError("Unknown file format: {}. Please use .bam or .cram".format(
